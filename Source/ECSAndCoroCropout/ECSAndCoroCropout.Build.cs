@@ -11,7 +11,8 @@ public class ECSAndCoroCropout : ModuleRules
 		PublicDependencyModuleNames.AddRange([
 			"Core", "CoreUObject", "Engine", "InputCore",
 			"CommonUI", "UMG", "Niagara", "AudioModulation",
-			"UE5Coro", "UE5CoroGAS"
+			"UE5Coro", "UE5CoroGAS",
+			"EnTT"
 		]);
 
 		PrivateDependencyModuleNames.AddRange([]);

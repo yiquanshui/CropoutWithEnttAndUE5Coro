@@ -117,10 +117,6 @@
 			"Enabled": false
 		},
 		{
-			"Name": "BlueprintHeaderView",
-			"Enabled": false
-		},
-		{
 			"Name": "GeometryMode",
 			"Enabled": false
 		},
@@ -160,10 +156,10 @@
 			"Name": "AudioModulation",
 			"Enabled": true
 		},
-        {
-            "Name": "GameplayAbilities",
-            "Enabled": true
-        }
+		{
+			"Name": "GameplayAbilities",
+			"Enabled": true
+		}
 	],
 	"TargetPlatforms": [
 		"Android",
