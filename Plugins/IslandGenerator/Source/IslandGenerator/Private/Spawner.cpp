@@ -10,117 +10,74 @@
 
 
 ASpawner::ASpawner() {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 
-FVoidCoroutine ASpawner::BeginSpawn() {
-	co_await AsyncLoadClasses();
-
-	OnSpawnFinished.Broadcast();
+FVoidCoroutine ASpawner::SpawnRandoms(bool bSpawnAssets) {
+	co_await RandomSpawnInst();
+	if (bSpawnAssets) {
+		co_await RandomSpawnAssets();
+	}
 }
 
 
 void ASpawner::BeginPlay() {
 	Super::BeginPlay();
-	AsyncLoadClasses();
-}
-
-
-void ASpawner::Tick(float DeltaTime) {
-	Super::Tick(DeltaTime);
-}
-
-
-void ASpawner::SpawnMeshOnly() {
-	bActorSwitch = false;
-	SpawnRandom();
-}
-
-
-UE5Coro::TCoroutine<bool> ASpawner::ReadyToSpawn() {
-	auto NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
-	while (true) {
-		if (!NavSys->IsNavigationBeingBuilt(this) && bAsyncComplete) {
-			break;
-		}
-		co_await UE5Coro::Latent::Seconds(0.5);
+	if (bAutoSpawn) {
+		SpawnRandoms(true);
 	}
-
-	if (bActorSwitch) {
-		const auto& SpawnData = SpawnTypes[IndexCounter];
-		SpawnAssets(SpawnData.ClassRef.Get(), SpawnData);
-
-		if (++IndexCounter >= SpawnTypes.Num()) {
-			IndexCounter = 0;
-			bActorSwitch = false;
-			co_return false;
-		}
-
-		co_return true;
-	}
-
-	UInstancedStaticMeshComponent* NewMeshComp = NewObject<UInstancedStaticMeshComponent>(this);
-	FinishAddComponent(NewMeshComp, false, FTransform::Identity);
-	const auto& [ClassRef, BiomeScale, BiomeCount, SpawnPerBiome] = SpawnInstances[IndexCounter];
-	NewMeshComp->SetStaticMesh(ClassRef);
-	SpawnInst(NewMeshComp, BiomeScale, BiomeCount, SpawnPerBiome);
-	if (++IndexCounter >= SpawnInstances.Num()) {
-		if (bCallSave) {
-			OnSpawnFinished.Broadcast();
-		}
-		co_return false;
-	}
-	
-	co_return true;
 }
 
 
-FVoidCoroutine ASpawner::SpawnRandom() {
-	
-	if (bActorSwitch && SpawnTypes.IsEmpty()) {
+FVoidCoroutine ASpawner::RandomSpawnAssets() {
+	if (SpawnTypes.IsEmpty()) {
 		UE_LOG(LogTemp, Error, TEXT("Not config SpawnTypes"));
 		co_return;
 	}
-	
+
+	int SpawnIndex = 0;
+	auto NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	while (SpawnIndex < SpawnTypes.Num()) {
+		if (NavSys->IsNavigationBeingBuilt(this)) {
+			co_await UE5Coro::Latent::Seconds(0.5);
+		} else {
+			const auto& SpawnData = SpawnTypes[SpawnIndex];
+			if (!SpawnData.ClassRef.IsNull()) {
+				UClass* Class = co_await UE5Coro::Latent::AsyncLoadClass(SpawnData.ClassRef);
+				SpawnAssets(Class, SpawnData);
+			}
+				
+			++SpawnIndex;
+		}
+	}
+}
+
+
+FVoidCoroutine ASpawner::RandomSpawnInst() {
 	if (SpawnInstances.IsEmpty()) {
 		UE_LOG(LogTemp, Error, TEXT("Need config SpawnInstances in Spawner"))
 		co_return;
 	}
 	
-	Counter = 0;
-	IndexCounter = 0;
-	while (co_await ReadyToSpawn()) {
-		; //empty
-	}
-
-	//unload loaded classes
-	LoadedClasses.Empty();
-}
-
-
-FVoidCoroutine ASpawner::AsyncLoadClasses() {
-	bAsyncComplete = false;
-	TArray<TSoftClassPtr<>> SoftClasses;
-	for (const FSpawnData& SpawnData : SpawnTypes) {
-		if (!SpawnData.ClassRef.IsNull()) {
-			SoftClasses.Emplace(SpawnData.ClassRef);
+	int SpawnIndex = 0;
+	auto NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	while (SpawnIndex < SpawnTypes.Num()) {
+		if (NavSys->IsNavigationBeingBuilt(this)) {
+			co_await UE5Coro::Latent::Seconds(0.5);
+		}
+		else {
+			UInstancedStaticMeshComponent* NewMeshComp = NewObject<UInstancedStaticMeshComponent>(this);
+			FinishAddComponent(NewMeshComp, false, FTransform::Identity);
+			const auto& [ClassRef, BiomeScale, BiomeCount, SpawnPerBiome] = SpawnInstances[SpawnIndex];
+			NewMeshComp->SetStaticMesh(ClassRef);
+			SpawnInst(NewMeshComp, BiomeScale, BiomeCount, SpawnPerBiome);
+			++SpawnIndex;
 		}
 	}
-
-	//Must Store the load class, or it is will not usable when ready to spawn
-	LoadedClasses = co_await UE5Coro::Latent::AsyncLoadClasses(SoftClasses);
-	bAsyncComplete = true;
 	
-	if (bAutoSpawn) {
-		SpawnRandom();
-	}
 }
 
-
-// UE5Coro::TCoroutine<UClass*> ASpawner::AsyncLoadClass(const TSoftClassPtr<AActor>& Class) {
-// 	co_await UE5Coro::Latent::AsyncLoadClasses()
-// }
 
 FVector StepPosition(const FVector& Position) {
 	FVector NewPosition = Position;
@@ -136,6 +93,7 @@ void ASpawner::SpawnAssets(UClass* Class, const FSpawnData& SpawnParams/*, FVect
 	FVector InstsSpawnPos = FVector::ZeroVector;
 	FNavLocation RandomPoint(InstsSpawnPos);
 	ANavigationData* UseNavData = NavData ? NavData.Get() : (NavSys ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate) : nullptr);
+	int Counter = 0;
 	for (int i = 0; i < SpawnParams.BiomeCount; ++i) {
 		if (NavSys) {
 			if (NavSys->GetRandomPointInNavigableRadius(FVector::ZeroVector, 10000.0, RandomPoint, UseNavData)) {
@@ -151,7 +109,7 @@ void ASpawner::SpawnAssets(UClass* Class, const FSpawnData& SpawnParams/*, FVect
 					SpawnPos = RandomPoint.Location;
 				}
 			}
-			FVector Scale(FMath::RandRange(0.0, SpawnParams.ScaleRange + 1.0));
+			FVector Scale(FMath::RandRange(1.0, SpawnParams.ScaleRange + 1.0));
 			FRotator Rotation(0.0, FMath::RandRange(0.0, SpawnParams.RandomRotationRange), 0.0);
 			FTransform SpawnTransform(Rotation, StepPosition(SpawnPos), Scale);
 			FActorSpawnParameters Params;
@@ -177,12 +135,6 @@ void ASpawner::SpawnInst(UInstancedStaticMeshComponent* Class, float InRadius, i
 			FVector Scale = FVector(UKismetMathLibrary::Lerp(0.8, 1.5, (BiomePos - InstPos).Length() / InRadius));
 			InstPos.Z = 0.0;
 			Class->AddInstance(FTransform(FRotator::ZeroRotator, InstPos, Scale), true);
-			++Counter;
 		}
 	}
 }
-
-
-// void ASpawner::LoadSpawn(const FSaveInteract& NewParam) {
-// }
-//

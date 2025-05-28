@@ -21,7 +21,9 @@ public class IslandGenerator : ModuleRules
                 "Slate",
                 "SlateCore",
                 "NavigationSystem", 
-                "UE5Coro"
+                "UE5Coro", 
+                "GeometryScriptingCore",
+                "GeometryFramework"
             }
         );
     }

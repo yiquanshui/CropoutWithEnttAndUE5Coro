@@ -185,20 +185,21 @@ void ACropGameMode::FindSpawner(UWorld* World) {
 FVoidCoroutine ACropGameMode::OnIslandGenComplete() {
 	co_await UE5Coro::Latent::NextTick();
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
-	if (!SaveSystem) {
-		co_return;
-	}
 
 	if (SaveSystem->HasSave()) {
 		SpawnLoadedInteractables();
 		Resources = SaveSystem->GetSaveGame()->GetResources();
-		Spawner->SpawnMeshOnly();
+		co_await Spawner->SpawnRandoms(false);
 		LoadVillagers();
 		UAudioModulationStatics::SetGlobalBusMixValue(this, NewMapMusicBus, 0.0, 0.0);
 	}
 	else {
 		UAudioModulationStatics::SetGlobalBusMixValue(this, NewMapMusicBus, 1.0, 0.0);
 		co_await BeginAsyncSpawning();
+	}
+
+	if (Spawner->IsNeedSave()) {
+		SaveSystem->UpdateAllVillagers();
 	}
 }
 
@@ -231,5 +232,5 @@ FVoidCoroutine ACropGameMode::BeginAsyncSpawning() {
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
 	SaveSystem->UpdateAllVillagers();
 
-	co_await Spawner->SpawnRandom();
+	co_await Spawner->SpawnRandoms(true);
 }

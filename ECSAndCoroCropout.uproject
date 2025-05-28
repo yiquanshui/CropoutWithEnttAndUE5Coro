@@ -159,7 +159,15 @@
 		{
 			"Name": "GameplayAbilities",
 			"Enabled": true
-		}
+		},
+        {
+            "Name": "IconBaker",
+            "Enabled": true
+        },
+        {
+            "Name": "UE5Coro",
+            "Enabled": true
+        }
 	],
 	"TargetPlatforms": [
 		"Android",

@@ -18,43 +18,24 @@ class ISLANDGENERATOR_API ASpawner : public AActor
 {
 	GENERATED_BODY()
 public:
-	DECLARE_MULTICAST_DELEGATE(FSpawnFinishedDelegate)
-
-	FSpawnFinishedDelegate OnSpawnFinished;
-	
-public:
 	ASpawner();
 
-	FVoidCoroutine BeginSpawn();
-
-	virtual void Tick(float DeltaTime) override;
-
-	void SpawnMeshOnly();
-
-	FVoidCoroutine SpawnRandom();
-
-	FVoidCoroutine AsyncLoadClasses();
-
-	// FVoidCoroutine AsyncLoadClass(const TSoftClassPtr<AActor>& Class);
+	FVoidCoroutine SpawnRandoms(bool bSpawnAssets);
 	
-	UFUNCTION(BlueprintCallable)
-	void SpawnAssets(UClass* Class, const FSpawnData& SpawnParams/*, FVector Pos, FVector SpawnPos, int32 InCounter*/);
-
-	UFUNCTION(BlueprintCallable)
-	void SpawnInst(UInstancedStaticMeshComponent* Class, float InRadius, int32 BiomeCount, int32 MaxSpawn);
-
-	// UFUNCTION(BlueprintCallable)
-	// void LoadSpawn(const FSaveInteract& NewParam);
+	bool IsNeedSave() const { return bCallSave; }
+	
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 private:
-	UE5Coro::TCoroutine<bool> ReadyToSpawn();
-private:
-	// UPROPERTY(VisibleAnywhere, Category="Default")
-	// TObjectPtr<USceneComponent> DefaultSceneRoot;
+	FVoidCoroutine RandomSpawnAssets();
+	
+	FVoidCoroutine RandomSpawnInst();
+	
+	void SpawnAssets(UClass* Class, const FSpawnData& SpawnParams/*, FVector Pos, FVector SpawnPos, int32 InCounter*/);
 
+	void SpawnInst(UInstancedStaticMeshComponent* Class, float InRadius, int32 BiomeCount, int32 MaxSpawn);
+private:
 	UPROPERTY(EditDefaultsOnly)
 	float Radius = 1000.0f;
 
@@ -67,23 +48,20 @@ private:
 	UPROPERTY(EditAnywhere, Category=Default)
 	TArray<FSpawnData> SpawnTypes;
 
-	UPROPERTY(EditDefaultsOnly)
-	int32 IndexCounter = 0;
-
 	UPROPERTY(EditInstanceOnly, Category=Default)
 	TObjectPtr<ANavigationData> NavData;
 
-	UPROPERTY( EditDefaultsOnly)
-	int32 Counter = 0;
-
+	// UPROPERTY( EditDefaultsOnly)
+	// int32 Counter = 0;
+	//
 	UPROPERTY( EditDefaultsOnly)
 	double TotalCount = 50;
 
 	UPROPERTY(EditAnywhere, Category=Default)
 	TArray<FSpawnInstance> SpawnInstances;
 
-	UPROPERTY(EditDefaultsOnly)
-	bool bActorSwitch = true;
+	// UPROPERTY(EditDefaultsOnly)
+	// bool bActorSwitch = true;
 
 	UPROPERTY(EditAnywhere, Category="Default")
 	bool bAutoSpawn = false;
@@ -96,9 +74,4 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category="Class Load")
 	FTimerHandle AsyncHandle;
-
-	UPROPERTY(EditDefaultsOnly, Category="Default")
-	bool bAsyncComplete = false;
-
-	TArray<UClass*> LoadedClasses;
 };
