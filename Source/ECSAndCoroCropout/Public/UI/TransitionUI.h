@@ -15,11 +15,11 @@ class ECSANDCOROCROPOUT_API UTransitionUI : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void TransitionIn();
+	void TransIn();
 
-	void TransitionOut();
+	void TransOut();
 
 protected:
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<UWidgetAnimation> Animation;
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> NewAnimation;
 };

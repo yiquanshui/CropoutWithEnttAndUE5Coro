@@ -75,4 +75,5 @@ DerivedDataCache/*
 
 .idea/
 .vsconfig
-*.dotsettings
+*.Dotsettings.user
+*.Dotsettings

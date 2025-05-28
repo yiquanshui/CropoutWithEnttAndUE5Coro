@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include "CropResourceType.h"
+#include "Engine/DataTable.h"
 
-#include "CropResource.generated.h"
+#include "CropResourceDef.generated.h"
 
 class AInteractable;
 
 USTRUCT(BlueprintType)
-struct FCropResource
+struct FCropResourceDef : public FTableRowBase
 {
 	GENERATED_BODY()
 

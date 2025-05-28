@@ -6,24 +6,17 @@
 #include "Animation/WidgetAnimation.h"
 
 
-void UTransitionUI::TransitionIn()
+void UTransitionUI::TransIn()
 {
-	if (Animation)
-	{
-		PlayAnimation(Animation);
-	}
+	PlayAnimation(NewAnimation);
 }
 
 
-void UTransitionUI::TransitionOut()
+void UTransitionUI::TransOut()
 {
-	if (Animation)
-	{
-		PlayAnimation(Animation, 0, 1, EUMGSequencePlayMode::Reverse);
-		[this]() -> FVoidCoroutine
-		{
-			co_await UE5Coro::Latent::Seconds(Animation->GetEndTime());
-			RemoveFromParent();
-		}();
-	}
+	PlayAnimation(NewAnimation, 0, 1, EUMGSequencePlayMode::Reverse);
+	[](UE5Coro::TLatentContext<UTransitionUI> This) -> FVoidCoroutine {
+		co_await UE5Coro::Latent::Seconds(This->NewAnimation->GetEndTime());
+		This->RemoveFromParent();
+	}(this);
 }

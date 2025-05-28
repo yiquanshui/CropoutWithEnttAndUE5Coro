@@ -12,10 +12,13 @@ public class ECSAndCoroCropout : ModuleRules
 			"Core", "CoreUObject", "Engine", "InputCore",
 			"CommonUI", "UMG", "Niagara", "AudioModulation",
 			"UE5Coro", "UE5CoroGAS",
-			"EnTT"
+			"EnTT",
+			"IslandGenerator",
 		]);
 
-		PrivateDependencyModuleNames.AddRange([]);
+		PrivateDependencyModuleNames.AddRange(["AIModule", 
+			"NavigationSystem" , "EnhancedInput", "Slate"
+		]);
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
