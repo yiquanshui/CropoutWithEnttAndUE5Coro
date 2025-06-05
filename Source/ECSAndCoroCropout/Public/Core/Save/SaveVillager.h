@@ -8,8 +8,10 @@ USTRUCT(BlueprintType)
 struct FSaveVillager
 {
 	GENERATED_BODY()
-	
+
+	UPROPERTY()
 	FVector Location = FVector::ZeroVector;
 
+	UPROPERTY()
 	FName Task;
 };

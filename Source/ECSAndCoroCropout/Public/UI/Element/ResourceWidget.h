@@ -21,16 +21,14 @@ class ECSANDCOROCROPOUT_API UResourceWidget : public UUserWidget
 public:
 	virtual void NativePreConstruct() override;
 
-	virtual void NativeConstruct() override;
-
 	virtual void NativeOnInitialized() override;
-	void SetResourceType(ECropResourceType InResourceType);
 
-	int GetValue() const { return Value; }
-	void SetValue(int InValue) { Value = InValue; }
+	void Init(ECropResourceType InResourceType);
 private:
-	void UpdateValue(ECropResourceType Resource, int Num);
-	
+	void OnResourceUpdated(ECropResourceType Resource, int Amount);
+
+	void UpdateValue(int NewValue);
+
 private:
 	ECropResourceType ResourceType = ECropResourceType::None;
 

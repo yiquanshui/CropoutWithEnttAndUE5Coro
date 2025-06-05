@@ -25,6 +25,8 @@ public:
 	void SetVillagers(TArray<FSaveVillager>&& InVillagers) { Villagers = InVillagers; }
 
 	void SetResources(const TMap<ECropResourceType, int32>& InResources) { Resources = InResources; }
+	
+	void UpdateResource(ECropResourceType Resource, int Num);
 
 	const TMap<ECropResourceType, int32>& GetResources() const { return Resources; }
 

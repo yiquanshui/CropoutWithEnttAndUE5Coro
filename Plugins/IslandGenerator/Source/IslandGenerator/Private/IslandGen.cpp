@@ -17,9 +17,7 @@
 #include "GameFramework/GameModeBase.h"
 
 
-// Sets default values
 AIslandGen::AIslandGen() {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 }
 
@@ -27,20 +25,26 @@ AIslandGen::AIslandGen() {
 void AIslandGen::OnConstruction(const FTransform& Transform) {
 	Super::OnConstruction(Transform);
 	if (bPreConstruct) {
-		CreateIsland(false);
+		CreateIsland();
 	}
 }
 
 
-// Called when the game starts or when spawned
 void AIslandGen::BeginPlay() {
 	Super::BeginPlay();
-	IIslandPlugin* IslandPlugin = Cast<IIslandPlugin>(GetGameInstance());
-	if (IslandPlugin) {
-		Seed = IslandPlugin->IslandSeed();
+	IIslandPlugin* GI = Cast<IIslandPlugin>(GetGameInstance());
+	if (GI) {
+		Seed = GI->IslandSeed();
 	}
 
-	CreateIsland(true);
+	CreateIsland();
+
+	SpawnMarkers();
+	IIslandPlugin* GM = Cast<IIslandPlugin>(GetWorld()->GetAuthGameMode());
+	if (GM) {
+		GM->IslandGenComplete();
+	}
+
 }
 
 
@@ -50,7 +54,7 @@ void AIslandGen::Tick(float DeltaTime) {
 }
 
 
-void AIslandGen::CreateIsland(bool bSpawnMarkers) {
+void AIslandGen::CreateIsland() {
 	DynMesh = DynamicMeshComponent->GetDynamicMesh();
 	DynMesh->Reset();
 	SpawnPoints.Empty();
@@ -64,10 +68,6 @@ void AIslandGen::CreateIsland(bool bSpawnMarkers) {
 		// Location.Z = -800.0;
 		UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCone(DynMesh, FGeometryScriptPrimitiveOptions(),
 			FTransform(FVector(Location.X, Location.Y, -800.0)), Radius, Radius / 4.0f, 1300.0f, 32, 1);
-
-		if (bSpawnMarkers && MarkerClass) {
-			GetWorld()->SpawnActor(MarkerClass, &Location);
-		}
 	}
 
 	UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(DynMesh, FGeometryScriptPrimitiveOptions(), FTransform(FVector(0, 0, -800)),
@@ -100,11 +100,6 @@ void AIslandGen::CreateIsland(bool bSpawnMarkers) {
 	ReleaseAllComputeMeshes();
 	AddActorWorldOffset(FVector(0, 0, 0.05));
 
-	IIslandPlugin* IslandPlugin = Cast<IIslandPlugin>(GetWorld()->GetAuthGameMode());
-	if (IslandPlugin) {
-		IslandPlugin->IslandGenComplete();
-	}
-
 	const FName GrassColorName {"GrassColour"};
 	FLinearColor GrassColor = UKismetMaterialLibrary::GetVectorParameterValue(this, MPC_Landscape, GrassColorName);
 	float H, S, V, A;
@@ -117,6 +112,15 @@ void AIslandGen::CreateIsland(bool bSpawnMarkers) {
 int AIslandGen::PlatformSwitch(int LowEnd, int HighEnd) {
 	const FName PlatformName = FPlatformProperties::IniPlatformName();
 	return (PlatformName == "Android" || PlatformName == "IOS" || PlatformName == "Switch") ? LowEnd : HighEnd;
+}
+
+
+void AIslandGen::SpawnMarkers() {
+	if (MarkerClass) {
+		for (const FVector& Point : SpawnPoints) {
+			GetWorld()->SpawnActor(MarkerClass, &Point);
+		}
+	}
 }
 
 

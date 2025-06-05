@@ -28,8 +28,10 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable)
 	void PlayWobble(const FVector& Pos);
 
+	UFUNCTION(BlueprintCallable)
 	void EndWobble();
 	
 	UFUNCTION(BlueprintCallable)
@@ -48,7 +50,7 @@ public:
 	UStaticMeshComponent* GetMesh() const { return Mesh; }
 
 private:
-	FVoidCoroutine DelayBeginPlay();
+	UE5Coro::TCoroutine<> DelayBeginPlay(FForceLatentCoroutine = {});
 
 	void TransformToTexture(const FVector2D& Vector, FVector2D& ScreenPos, FVector2D& ScreenSize);
 

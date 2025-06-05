@@ -28,7 +28,8 @@ void ACropResource::IslandGenComplete() {
 
 void ACropResource::OnConstruction(const FTransform& Transform) {
 	Super::OnConstruction(Transform);
-	Tags.AddUnique(UEnum::GetValueAsName(ResourceType));
+	UEnum* EnumClass = StaticEnum<ECropResourceType>();
+	Tags.AddUnique(FName(EnumClass->GetNameStringByValue(static_cast<int64>(ResourceType))));
 
 	if (bUseRandomMesh && MeshList.Num() > 0) {
 		Mesh->SetStaticMesh(MeshList[FMath::RandRange(0, MeshList.Num() - 1)]);
@@ -68,7 +69,7 @@ void ACropResource::BeginPlay() {
 }
 
 
-FVoidCoroutine ACropResource::DoScaleUp(float Delay) {
+UE5Coro::TCoroutine<> ACropResource::DoScaleUp(float Delay, FForceLatentCoroutine) {
 	co_await UE5Coro::Latent::Seconds(Delay);
 	Mesh->SetRelativeScale3D(FVector::Zero());
 	Mesh->SetHiddenInGame(false);

@@ -9,6 +9,7 @@
 #include "UE5Coro.h"
 #include "CropGameMode.generated.h"
 
+class UCropResourceComponent;
 class ATownCenter;
 class UCommonActivatableWidget;
 class USoundControlBus;
@@ -39,17 +40,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void LoadVillagers();
 
-	FVoidCoroutine EndGame(bool bWin);
+	UE5Coro::TCoroutine<> EndGame(bool bWin, FForceLatentCoroutine = {});
 
 	void SpawnVillagers(int Count);
 
-	void AddResource(ECropResourceType Resource, int32 Num);
+	// void AddResource(ECropResourceType Resource, int32 Num);
 
 	void AddUI(const TSubclassOf<UCommonActivatableWidget>& WidgetClass);
 
 	void RemoveCurrentUILayer();
-
-	const TMap<ECropResourceType, int32>& GetCurrentResources() { return Resources; }
 	
 protected:
 	virtual void BeginPlay() override;
@@ -57,32 +56,19 @@ protected:
 private:
 	void FindSpawner(UWorld* World);
 
-	FVoidCoroutine OnIslandGenComplete();
+	UE5Coro::TCoroutine<> OnIslandGenComplete(FForceLatentCoroutine = {});
 
-	FVoidCoroutine BeginAsyncSpawning();
+	UE5Coro::TCoroutine<> BeginAsyncSpawning(FForceLatentCoroutine = {});
 
 	UFUNCTION(BlueprintCallable)
 	void SpawnVillager();
 
 private:
-
-	UPROPERTY(EditDefaultsOnly)
-	TMap<ECropResourceType, int32> Resources = {{ECropResourceType::Food, 100}};
-
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FUpdateResources, ECropResourceType, Resource, int32, Value);
-
-
-	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category="Default")
-	FUpdateResources UpdateResources;
-
 	UPROPERTY(EditDefaultsOnly, Category="Default")
 	int32 VillagerCount = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category="Default")
 	float StartTime = 0.f;
-
-
-
 
 	UPROPERTY()
 	TObjectPtr<ASpawner> Spawner;
@@ -107,4 +93,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<USoundControlBus> NewMapMusicBus;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UCropResourceComponent> ResourceComponent;
 };

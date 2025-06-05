@@ -31,7 +31,7 @@ double ABuilding::ProgressConstruct(double InvestedTime) {
 	}
 
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(GetGameInstance());
-	SaveSystem->UpdateAllInteractables();
+	SaveSystem->UpdateInteractables();
 	return LastIndex - Progress;
 }
 
@@ -49,7 +49,7 @@ void ABuilding::SpawnInBuildMode(double Progression) {
 void ABuilding::ConstructionComplete() {
 	Tags.Remove("Build");
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(GetGameInstance());
-	SaveSystem->UpdateAllInteractables();
+	SaveSystem->UpdateInteractables();
 }
 
 

@@ -14,7 +14,7 @@ ASpawner::ASpawner() {
 }
 
 
-FVoidCoroutine ASpawner::SpawnRandoms(bool bSpawnAssets) {
+UE5Coro::TCoroutine<> ASpawner::SpawnRandoms(bool bSpawnAssets, FForceLatentCoroutine) {
 	co_await RandomSpawnInst();
 	if (bSpawnAssets) {
 		co_await RandomSpawnAssets();
@@ -30,7 +30,7 @@ void ASpawner::BeginPlay() {
 }
 
 
-FVoidCoroutine ASpawner::RandomSpawnAssets() {
+UE5Coro::TCoroutine<> ASpawner::RandomSpawnAssets(FForceLatentCoroutine) {
 	if (SpawnTypes.IsEmpty()) {
 		UE_LOG(LogTemp, Error, TEXT("Not config SpawnTypes"));
 		co_return;
@@ -54,7 +54,7 @@ FVoidCoroutine ASpawner::RandomSpawnAssets() {
 }
 
 
-FVoidCoroutine ASpawner::RandomSpawnInst() {
+UE5Coro::TCoroutine<> ASpawner::RandomSpawnInst(FForceLatentCoroutine) {
 	if (SpawnInstances.IsEmpty()) {
 		UE_LOG(LogTemp, Error, TEXT("Need config SpawnInstances in Spawner"))
 		co_return;

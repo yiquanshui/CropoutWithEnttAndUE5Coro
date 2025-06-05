@@ -12,19 +12,46 @@
 #include "Kismet/GameplayStatics.h"
 
 
+namespace
+{
+TArray<FSaveVillager> GetVillagers(UWorld* World) {
+	TArray<FSaveVillager> SaveVillagers;
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
+	for (TActorIterator<APawn> It(World); It; ++It){
+		APawn* Pawn = *It;
+		if (Pawn != PlayerPawn){
+			SaveVillagers.Emplace(Pawn->GetActorLocation(), Pawn->Tags.Num() > 0 ? Pawn->Tags[0] : FName());
+		}
+	}
+
+	return SaveVillagers;
+}
+
+
+TArray<FSaveInteract> GetInteractables(UWorld* World) {
+	TArray<FSaveInteract> SaveInteracts;
+	FName EmptyName;
+	for (TActorIterator<AInteractable> It(World); It; ++It) {
+		AInteractable* Interactable = *It;
+		const FName& Tag = Interactable->Tags.Num() > 0 ? Interactable->Tags[0] : EmptyName;
+		SaveInteracts.Emplace(Interactable->GetActorTransform(), Interactable->GetClass(), Interactable->GetProgressionState(), Tag);
+	}
+
+	return SaveInteracts;
+}
+}
+
+
 UGameSaveSystem::UGameSaveSystem() {
-	CropSaveGame = CreateDefaultSubobject<UCropSaveGame>("CurrentSaveGame");
 }
 
 
 void UGameSaveSystem::SaveGame() {
-	FAsyncSaveGameToSlotDelegate SaveDelegate;
-	SaveDelegate.BindLambda([this](const FString& SlotName, const int32 UserIndex, const bool bSuccess) {
-		if (bSuccess){
-			bHasSave = true;
-		}
-	});
-	UGameplayStatics::AsyncSaveGameToSlot(CropSaveGame, "SAVE", 0, SaveDelegate);
+	if (!SaveCoroutine.IsDone()) {
+		SaveCoroutine.Cancel();
+	}
+	
+	SaveGame_Internal();
 }
 
 
@@ -33,7 +60,9 @@ void UGameSaveSystem::ClearSave(bool bClearSeed) {
 		CropSaveGame->UpdateSeed();
 	}
 
-	bHasSave = false;
+	if (!SaveCoroutine.IsDone()) {
+		SaveCoroutine.Cancel();
+	}
 
 	CropSaveGame->SetPlayTime(0.0);
 	CropSaveGame->SetVillagers(TArray<FSaveVillager>());
@@ -42,98 +71,53 @@ void UGameSaveSystem::ClearSave(bool bClearSeed) {
 	if (auto Instance = Cast<UCropGameInstance>(GetGameInstance())){
 		Instance->SetMusicPlaying(false);
 	}
+	
+	UGameplayStatics::DeleteGameInSlot("SAVE", 0);
+	bHasSave = false;
 }
 
 
-void UGameSaveSystem::UpdateAllInteractables() {
+void UGameSaveSystem::UpdateInteractables() {
 	UWorld* World = GetGameInstance()->GetWorld();
 	if (World){
-		TArray<FSaveInteract> SaveInteracts;
-		for (TActorIterator<AInteractable> It(World); It; ++It){
-			AInteractable* Interactable = *It;
-			SaveInteracts.Emplace(Interactable->GetActorTransform(), Interactable->GetClass(),
-			                      Interactable->GetProgressionState(), Interactable->Tags.Num() > 0 ? Interactable->Tags[0] : FName());
-		}
-
-		CropSaveGame->SetInteracts(MoveTemp(SaveInteracts));
+		CropSaveGame->SetInteracts(GetInteractables(World));
 		SaveGame();
 	}
 }
 
 
-void UGameSaveSystem::LoadLevel() {
-	bHasSave = true;
-}
+// void UGameSaveSystem::LoadLevel() {
+// 	bHasSave = true;
+// }
+//
 
-
-void UGameSaveSystem::UpdateAllResources(const TMap<ECropResourceType, int32>& Resources) {
+void UGameSaveSystem::UpdateResources(const TMap<ECropResourceType, int32>& Resources) {
 	CropSaveGame->SetResources(Resources);
-	[](UE5Coro::TLatentContext<ThisClass> Self) -> FVoidCoroutine {
-		co_await UE5Coro::Latent::Seconds(5.0);
-		Self->SaveGame();
-	}(this);
-}
-
-
-void UGameSaveSystem::UpdateAllVillagers() {
-	UWorld* World = GetGameInstance()->GetWorld();
-	if (!World){
-		return;
-	}
-
-	TArray<FSaveVillager> SaveVillagers;
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
-	for (TActorIterator<APawn> It(World); It; ++It){
-		APawn* Pawn = *It;
-		if (Pawn != PlayerPawn){
-			SaveVillagers.Emplace(Pawn->GetActorLocation(), Pawn->Tags.Num() > 0 ? Pawn->Tags[0] : FName());
-		}
-	}
-
-	CropSaveGame->SetVillagers(MoveTemp(SaveVillagers));
 	SaveGame();
 }
 
 
-void UGameSaveSystem::UpdateSaveAsset() {
-	UWorld* World = GetGameInstance()->GetWorld();
-	if (!World){
-		return;
-	}
+void UGameSaveSystem::UpdateResource(ECropResourceType Resource, int Num) {
+	CropSaveGame->UpdateResource(Resource, Num);
+	DelaySave(5.0f);
+}
 
-	TArray<FSaveVillager> SaveVillagers;
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
-	for (TActorIterator<APawn> It(World); It; ++It){
-		APawn* Pawn = *It;
-		if (Pawn != PlayerPawn){
-			SaveVillagers.Emplace(Pawn->GetActorLocation(), Pawn->Tags.Num() > 0 ? Pawn->Tags[0] : FName());
-		}
-	}
 
-	CropSaveGame->SetVillagers(MoveTemp(SaveVillagers));
-
-	TArray<FSaveInteract> SaveInteracts;
-	for (TActorIterator<AInteractable> It(World); It; ++It){
-		AInteractable* Interactable = *It;
-		SaveInteracts.Emplace(Interactable->GetActorTransform(), Interactable->GetClass(), Interactable->GetProgressionState());
-	}
-
-	CropSaveGame->SetInteracts(MoveTemp(SaveInteracts));
-
-	ACropGameMode* GameMode = Cast<ACropGameMode>(UGameplayStatics::GetGameMode(World));
-	if (GameMode){
-		UCropResourceComponent* ResourceComponent = GameMode->GetComponentByClass<UCropResourceComponent>();
-		if (ResourceComponent){
-			CropSaveGame->SetResources(ResourceComponent->GetResources());
-		}
-		else{
-			UE_LOG(LogTemp, Warning, TEXT("ResourceComponent is null"));
-		}
+void UGameSaveSystem::UpdateVillagers() {
+	UWorld* World = GetWorld();
+	if (World){
+		CropSaveGame->SetVillagers(GetVillagers(World));
+		SaveGame();
 	}
 }
 
 
+void UGameSaveSystem::UpdateVillager(AVillager* Villager) {
+}
+
+
 void UGameSaveSystem::LoadGame() {
+	SaveCoroutine.Cancel();
 	bHasSave = UGameplayStatics::DoesSaveGameExist("SAVE", 0);
 	if (bHasSave){
 		UCropSaveGame* LoadedGame = Cast<UCropSaveGame>(UGameplayStatics::LoadGameFromSlot("SAVE", 0));
@@ -146,5 +130,36 @@ void UGameSaveSystem::LoadGame() {
 		if (auto Instance = Cast<UCropGameInstance>(GetGameInstance())){
 			Instance->SetMusicPlaying(false);
 		}
+	}
+}
+
+
+void UGameSaveSystem::UpdateAll() {
+	UWorld* World = GetWorld();
+	if (World) {
+		CropSaveGame->SetVillagers(GetVillagers(World));
+		CropSaveGame->SetInteracts(GetInteractables(World));
+		SaveGame();
+	}
+}
+
+
+void UGameSaveSystem::DelaySave(float Delay) {
+	if (SaveCoroutine.IsDone()) {
+		SaveCoroutine = [Delay](UE5Coro::TLatentContext<ThisClass> Self) -> UE5Coro::TCoroutine<> {
+			co_await UE5Coro::Latent::Seconds(Delay);
+			co_await Self->SaveGame_Internal();
+			// Self->SaveGame();
+		}(this);
+	}
+}
+
+
+UE5Coro::TCoroutine<> UGameSaveSystem::SaveGame_Internal() {
+	auto Thread = UE5Coro::Async::MoveToSimilarThread();
+	co_await UE5Coro::Async::MoveToTask();
+	if (UGameplayStatics::SaveGameToSlot(CropSaveGame, "Save", 0)) {
+		co_await Thread;
+		bHasSave = true;
 	}
 }

@@ -20,10 +20,12 @@ class ECSANDCOROCROPOUT_API UCostWidget : public UUserWidget
 public:
 	virtual void NativePreConstruct() override;
 	
-	void SetCost(int InCost) { Cost = InCost; }
+	void SetCost(int InCost);
 
-	void SetResourceType(ECropResourceType InResourceType) { Resource = InResourceType; }
+	void SetResourceType(ECropResourceType InResourceType);
 
+private:
+	void UpdateImage();
 private:
 	UPROPERTY(VisibleAnywhere)
 	int Cost = 0;

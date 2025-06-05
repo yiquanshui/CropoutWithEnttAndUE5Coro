@@ -30,12 +30,12 @@ void ACropGameMode::IslandGenComplete() {
 
 
 ACropGameMode::ACropGameMode() {
-	CreateDefaultSubobject<UCropResourceComponent>(TEXT("CropResourceComponent"));
+	ResourceComponent = CreateDefaultSubobject<UCropResourceComponent>(TEXT("CropResourceComponent"));
 }
 
 
 void ACropGameMode::LoseCheck() {
-	if (Resources.FindRef(ECropResourceType::Food) <= 0) {
+	if (ResourceComponent->GetResourceAmount(ECropResourceType::Food) <= 0) {
 		EndGame(false);
 	}
 }
@@ -71,7 +71,6 @@ void ACropGameMode::LoadVillagers() {
 	}
 
 	UpdateVillagers.Broadcast(SaveVillagers.Num());
-	SaveSystem->UpdateAllResources(Resources);
 }
 
 
@@ -98,7 +97,7 @@ void ACropGameMode::SpawnVillager() {
 }
 
 
-FVoidCoroutine ACropGameMode::EndGame(bool bWin) {
+UE5Coro::TCoroutine<> ACropGameMode::EndGame(bool bWin, FForceLatentCoroutine) {
 	static bool bEnded = false;
 	if (bEnded) {
 		co_return;
@@ -116,18 +115,18 @@ void ACropGameMode::SpawnVillagers(int Count) {
 	UpdateVillagers.Broadcast(VillagerCount);
 
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
-	SaveSystem->UpdateAllVillagers();
+	SaveSystem->UpdateVillagers();
 }
 
 
-void ACropGameMode::AddResource(ECropResourceType Resource, int32 Num) {
-	const int32 Total = Resources.FindRef(Resource) + Num;
-	Resources[Resource] = Total;
-	UpdateResources.Broadcast(Resource, Total);
-
-	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
-	SaveSystem->UpdateAllResources(Resources);
-}
+// void ACropGameMode::AddResource(ECropResourceType Resource, int32 Num) {
+// 	const int32 Total = Resources.FindRef(Resource) + Num;
+// 	Resources[Resource] = Total;
+// 	UpdateResources.Broadcast(Resource, Total);
+//
+// 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
+// 	SaveSystem->UpdateResources(Resources);
+// }
 
 
 void ACropGameMode::AddUI(const TSubclassOf<UCommonActivatableWidget>& WidgetClass) {
@@ -182,13 +181,17 @@ void ACropGameMode::FindSpawner(UWorld* World) {
 }
 
 
-FVoidCoroutine ACropGameMode::OnIslandGenComplete() {
-	co_await UE5Coro::Latent::NextTick();
+UE5Coro::TCoroutine<> ACropGameMode::OnIslandGenComplete(FForceLatentCoroutine) {
+	co_await UE5Coro::Latent::NextTick();  //MUST, wait for GameMode BeginPlay execute.
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
 
 	if (SaveSystem->HasSave()) {
+		const auto& Resources = SaveSystem->GetSaveGame()->GetResources();
+		for (const TPair<ECropResourceType, int32>& Pair : Resources) {
+			ResourceComponent->IncreaseResource(Pair.Key, Pair.Value);
+		}
+		
 		SpawnLoadedInteractables();
-		Resources = SaveSystem->GetSaveGame()->GetResources();
 		co_await Spawner->SpawnRandoms(false);
 		LoadVillagers();
 		UAudioModulationStatics::SetGlobalBusMixValue(this, NewMapMusicBus, 0.0, 0.0);
@@ -198,13 +201,10 @@ FVoidCoroutine ACropGameMode::OnIslandGenComplete() {
 		co_await BeginAsyncSpawning();
 	}
 
-	if (Spawner->IsNeedSave()) {
-		SaveSystem->UpdateAllVillagers();
-	}
 }
 
 
-FVoidCoroutine ACropGameMode::BeginAsyncSpawning() {
+UE5Coro::TCoroutine<> ACropGameMode::BeginAsyncSpawning(FForceLatentCoroutine) {
 	UWorld* World = GetWorld();
 	if (!World) {
 		co_return;
@@ -229,8 +229,11 @@ FVoidCoroutine ACropGameMode::BeginAsyncSpawning() {
 	}
 
 	UpdateVillagers.Broadcast(VillagerCount);
-	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
-	SaveSystem->UpdateAllVillagers();
 
 	co_await Spawner->SpawnRandoms(true);
+	
+	if (Spawner->IsNeedSave()) {
+		UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(UGameplayStatics::GetGameInstance(this));
+		SaveSystem->UpdateAll();
+	}
 }

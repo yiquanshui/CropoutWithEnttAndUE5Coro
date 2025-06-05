@@ -26,7 +26,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	FVoidCoroutine DelayedBeginPlay();
+	UE5Coro::TCoroutine<> DelayedBeginPlay(FForceLatentCoroutine = {});
 	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UBoxComponent> NavBlocker;

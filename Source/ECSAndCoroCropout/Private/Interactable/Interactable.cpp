@@ -121,7 +121,7 @@ double AInteractable::Interact() {
 }
 
 
-FVoidCoroutine AInteractable::DelayBeginPlay() {
+UE5Coro::TCoroutine<> AInteractable::DelayBeginPlay(FForceLatentCoroutine) {
 	co_await UE5Coro::Latent::NextTick();
 	if (bEnableGroundBlend) {
 		UCanvas* Canvas;

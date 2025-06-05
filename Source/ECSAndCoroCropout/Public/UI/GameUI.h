@@ -43,7 +43,7 @@ protected:
 	TObjectPtr<UCommonButtonBase> BTN_Pause;
 
 private:
-	FVoidCoroutine AddResourceWidgets();
+	UE5Coro::TCoroutine<> AddResourceWidgets(FForceLatentCoroutine = {});
 
 	void UpdateVillagerDetails(int VillagerCount);
 

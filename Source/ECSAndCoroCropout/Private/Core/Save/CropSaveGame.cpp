@@ -12,3 +12,14 @@ void UCropSaveGame::UpdateSeed()
 }
 
 
+void UCropSaveGame::UpdateResource(ECropResourceType Resource, int Num) {
+	int* Store = Resources.Find(Resource);
+	if (Store) {
+		*Store = Num;
+	}
+	else {
+		Resources.Add(Resource, Num);
+	}
+}
+
+

@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.5",
+	"EngineAssociation": "5.6",
 	"Category": "Samples",
 	"Description": "",
 	"Modules": [
@@ -160,14 +160,14 @@
 			"Name": "GameplayAbilities",
 			"Enabled": true
 		},
-        {
-            "Name": "IconBaker",
-            "Enabled": true
-        },
-        {
-            "Name": "UE5Coro",
-            "Enabled": true
-        }
+		{
+			"Name": "IconBaker",
+			"Enabled": true
+		},
+		{
+			"Name": "UE5Coro",
+			"Enabled": true
+		}
 	],
 	"TargetPlatforms": [
 		"Android",

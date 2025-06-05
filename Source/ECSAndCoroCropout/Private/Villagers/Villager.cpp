@@ -17,9 +17,7 @@
 #include "Villagers/TR_VillagerJob.h"
 
 
-// Sets default values
 AVillager::AVillager() {
-	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
 	RootComponent = Capsule;
@@ -40,6 +38,7 @@ AVillager::AVillager() {
 	Decal->SetupAttachment(Capsule);
 
 	FloatingPawnMovement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingMovement"));
+	CreateDefaultSubobject<UCropResourceComponent>(TEXT("CropResource"));
 }
 
 
@@ -65,19 +64,14 @@ void AVillager::PossessedBy(AController* NewController) {
 }
 
 
-// Called when the game starts or when spawned
 void AVillager::BeginPlay() {
 	Super::BeginPlay();
 	AddActorWorldOffset(FVector(0.0, 0.0, Capsule->GetScaledCapsuleHalfHeight()));
 
 	UWorld* World = GetWorld();
-	if (!World){
-		return;
-	}
-
 	World->GetTimerManager().SetTimer(EatTimerHandle, FTimerDelegate::CreateUObject(this, &ThisClass::Eat), 24.0f, true);
 	ChangeJob(FName("Idle"));
-	[](UE5Coro::TLatentContext<AVillager> Self)-> FVoidCoroutine {
+	[](UE5Coro::TLatentContext<AVillager> Self)-> UE5Coro::TCoroutine<> {
 		USkeletalMesh* HairMesh = co_await UE5Coro::Latent::AsyncLoadObject<USkeletalMesh>(Self->HairPick());
 		if (HairMesh){
 			Self->Hair->SetSkeletalMesh(HairMesh);
@@ -87,24 +81,22 @@ void AVillager::BeginPlay() {
 }
 
 
-// Called every frame
 void AVillager::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 }
 
 
-// Called to bind functionality to input
 void AVillager::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
 
-FVoidCoroutine AVillager::PlayAnim(UAnimMontage* Montage, double Length) {
+UE5Coro::TCoroutine<> AVillager::PlayAnim(UAnimMontage* Montage, double Length, FForceLatentCoroutine) {
 	SkeletalMesh->PlayAnimation(Montage, false);
-	[Length, this]()-> FVoidCoroutine {
-		co_await UE5Coro::Latent::Seconds(Length);
-		SkeletalMesh->GetAnimInstance()->Montage_StopGroupByName(0.f, TEXT("DefaultGroup"));
-	}();
+	[](UE5Coro::TLatentContext<AVillager> Self, double AwaitTime)-> UE5Coro::TCoroutine<> {
+		co_await UE5Coro::Latent::Seconds(AwaitTime);
+		Self->SkeletalMesh->GetAnimInstance()->Montage_StopGroupByName(0.f, TEXT("DefaultGroup"));
+	}(this, Length);
 
 	TTuple<FName, const FBranchingPointNotifyPayload*> Result = co_await UE5Coro::Anim::PlayMontageNotifyEnd(SkeletalMesh->GetAnimInstance(), Montage);
 	Tool->SetVisibility(false);
@@ -116,19 +108,25 @@ void AVillager::ReturnToIdle() {
 }
 
 
-FVoidCoroutine AVillager::ChangeJob(const FName& TargetJob) {
+UE5Coro::TCoroutine<> AVillager::ChangeJob(const FName& TargetJob, FForceLatentCoroutine) {
 	NewJob = TargetJob;;
 	FTR_VillagerJob* Job = UCropStatics::GetGameInstance(GetWorld())->GetVillagerJob(TargetJob);
 	if (!Job){
 		co_return;
 	}
 
-	if (!Tags.Contains(TargetJob)){
+	if (Tags.Num() > 0){
+		Tags[0] = TargetJob;
+	}
+	else {
 		Tags.Add(TargetJob);
 	}
 
 	ResetJobState();
-	ActiveBehavior = co_await UE5Coro::Latent::AsyncLoadObject<UBehaviorTree>(Job->BehaviourTree);
+
+	if (!Job->BehaviourTree.IsNull()) {
+		ActiveBehavior = co_await UE5Coro::Latent::AsyncLoadObject<UBehaviorTree>(Job->BehaviourTree);
+	}
 
 	AAIController* AIController = Cast<AAIController>(GetController());
 	if (AIController) {
@@ -141,15 +139,21 @@ FVoidCoroutine AVillager::ChangeJob(const FName& TargetJob) {
 		}
 	}
 
-	//
-	WorkAnim = co_await UE5Coro::Latent::AsyncLoadObject<UAnimMontage>(Job->WorkAnim);
-	USkeletalMesh* HatMesh = co_await UE5Coro::Latent::AsyncLoadObject<USkeletalMesh>(Job->Hat);
-	if (HatMesh) {
-		Hat->SetSkeletalMesh(HatMesh);
-		Hat->SetVisibility(true);
+	if (!Job->WorkAnim.IsNull()) {
+		WorkAnim = co_await UE5Coro::Latent::AsyncLoadObject<UAnimMontage>(Job->WorkAnim);
 	}
 
-	TargetTool = co_await UE5Coro::Latent::AsyncLoadObject<UStaticMesh>(Job->Tool);
+	if (!Job->Hat.IsNull()) {
+		USkeletalMesh* HatMesh = co_await UE5Coro::Latent::AsyncLoadObject<USkeletalMesh>(Job->Hat);
+		if (HatMesh) {
+			Hat->SetSkeletalMesh(HatMesh);
+			Hat->SetVisibility(true);
+		}
+	}
+
+	if (!Job->Tool.IsNull()) {
+		TargetTool = co_await UE5Coro::Latent::AsyncLoadObject<UStaticMesh>(Job->Tool);
+	}
 }
 
 
@@ -163,7 +167,7 @@ void AVillager::Action(AActor* Target) {
 		ChangeJob(Target->Tags[0]);
 
 		UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(GetGameInstance());
-		SaveSystem->UpdateAllVillagers();
+		SaveSystem->UpdateVillagers();
 	}
 }
 
@@ -195,7 +199,7 @@ void AVillager::ReturnToDefaultBT() {
 
 
 void AVillager::Eat() {
-	UCropStatics::GetGameMode(GetWorld())->GetComponentByClass<UCropResourceComponent>()->RemoveTargetResource(ECropResourceType::Food, 3);
+	UCropStatics::GetGameMode(GetWorld())->GetComponentByClass<UCropResourceComponent>()->ReduceResource(ECropResourceType::Food, 3);
 }
 
 
@@ -206,7 +210,6 @@ void AVillager::ResetJobState() {
 	
 	Tool->SetStaticMesh(nullptr);
 	Tool->SetVisibility(false);
-	TargetRef = nullptr;
 }
 
 
@@ -223,7 +226,7 @@ void AVillager::StopJob() {
 
 TSoftObjectPtr<USkeletalMesh> AVillager::HairPick() {
 	if (HairMeshes.IsEmpty()) {
-		TEXT("Hair meshes are not set");
+		UE_LOG(LogTemp, Warning, TEXT("Hair meshes are not set"));
 		return nullptr;
 	}
 	

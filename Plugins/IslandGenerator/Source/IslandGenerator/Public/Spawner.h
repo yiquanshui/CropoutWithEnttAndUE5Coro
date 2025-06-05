@@ -20,7 +20,7 @@ class ISLANDGENERATOR_API ASpawner : public AActor
 public:
 	ASpawner();
 
-	FVoidCoroutine SpawnRandoms(bool bSpawnAssets);
+	UE5Coro::TCoroutine<> SpawnRandoms(bool bSpawnAssets, FForceLatentCoroutine = {});
 	
 	bool IsNeedSave() const { return bCallSave; }
 	
@@ -28,9 +28,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	FVoidCoroutine RandomSpawnAssets();
+	UE5Coro::TCoroutine<> RandomSpawnAssets(FForceLatentCoroutine = {});
 	
-	FVoidCoroutine RandomSpawnInst();
+	UE5Coro::TCoroutine<> RandomSpawnInst(FForceLatentCoroutine = {});
 	
 	void SpawnAssets(UClass* Class, const FSpawnData& SpawnParams/*, FVector Pos, FVector SpawnPos, int32 InCounter*/);
 

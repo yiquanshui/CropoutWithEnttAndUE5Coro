@@ -23,9 +23,11 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	void CreateIsland(bool bSpawnMarkers);
+	void CreateIsland();
 
 	int PlatformSwitch(int LowEnd, int HighEnd);
+
+	void SpawnMarkers();
 private:
 	UPROPERTY(VisibleAnywhere)
 	FRandomStream Seed;
@@ -54,4 +56,5 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UMaterialParameterCollection> MPC_Landscape;
+
 };

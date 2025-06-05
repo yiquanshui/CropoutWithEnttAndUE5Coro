@@ -20,37 +20,44 @@ class ECSANDCOROCROPOUT_API AVillager : public APawn
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this pawn's properties
 	AVillager();
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 	virtual void PossessedBy(AController* NewController) override;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	AActor* GetWorkingTarget() const { return TargetRef; }
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	FVoidCoroutine PlayAnim(UAnimMontage* Montage, double Length);
+	// UFUNCTION(BlueprintCallable)
+	UE5Coro::TCoroutine<> PlayAnim(UAnimMontage* Montage, double Length, FForceLatentCoroutine Coro = {});
 
+	UFUNCTION(BlueprintCallable)
 	void ReturnToIdle();
 
-	FVoidCoroutine ChangeJob(const FName& TargetJob);
+	// UFUNCTION(BlueprintCallable)
+	UE5Coro::TCoroutine<> ChangeJob(const FName& TargetJob, FForceLatentCoroutine Coro = {});
 
+	UFUNCTION(BlueprintCallable)
 	void Action(AActor* Target);
 
+	UFUNCTION(BlueprintCallable)
 	void PlayWorkAnim(double Delay);
 
+	UFUNCTION(BlueprintCallable)
 	void PlayDeliverAnim();
 
+	UFUNCTION(BlueprintCallable)
 	void AddResource(ECropResourceType Resource, int32 Num);
 
+	UFUNCTION(BlueprintCallable)
 	void ReturnToDefaultBT();
 
 	UFUNCTION(BlueprintCallable)

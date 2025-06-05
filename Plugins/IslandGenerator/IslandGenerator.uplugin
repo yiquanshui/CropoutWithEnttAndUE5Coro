@@ -25,6 +25,10 @@
         {
             "Name": "UE5Coro",
             "Enabled": true
+        },
+        {
+            "Name": "GeometryScripting",
+            "Enabled": true
         }
     ]
 }

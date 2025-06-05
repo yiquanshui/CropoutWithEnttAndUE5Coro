@@ -48,7 +48,7 @@ void UGameUI::AddResource() {
 	}
 	
 	UResourceWidget* ResourceWidget = CreateWidget<UResourceWidget>(this, ResourceWidgetClass);
-	ResourceWidget->SetResourceType(Resources);
+	ResourceWidget->Init(Resources);
 	ResourceContainer->AddChild(ResourceWidget);
 	Resources = static_cast<ECropResourceType>(static_cast<BYTE>(Resources) << 1);
 }
@@ -89,7 +89,7 @@ void UGameUI::EndGame(bool bWin) {
 }
 
 
-FVoidCoroutine UGameUI::AddResourceWidgets() {
+UE5Coro::TCoroutine<> UGameUI::AddResourceWidgets(FForceLatentCoroutine) {
 	while (Resources < ECropResourceType::Max) {
 		co_await UE5Coro::Latent::Seconds(0.1);
 		AddResource();

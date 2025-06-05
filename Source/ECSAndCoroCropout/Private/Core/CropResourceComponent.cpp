@@ -12,50 +12,34 @@ UCropResourceComponent::UCropResourceComponent() {
 }
 
 
-void UCropResourceComponent::AddResource(ECropResourceType ResourceType, int Amount) {
-	int* ResourceValue = Resources.Find(ResourceType);
-	if (ResourceValue) {
-		*ResourceValue += Amount;
-	}
-	else {
-		Resources.Add(ResourceType, Amount);
-	}
+void UCropResourceComponent::IncreaseResource(ECropResourceType ResourceType, int Amount) {
+	int& ResourceAmount = Resources.FindOrAdd(ResourceType);
+	ResourceAmount += Amount;
+	UpdateResources.Broadcast(ResourceType, ResourceAmount);
 }
 
 
-// void UCropResourceComponent::RemoveResource(ECropResourceType ResourceType, int Amount) {
-// 	int* ResourceValue = Resources.Find(ResourceType);
-// 	if (ResourceValue) {
-// 		*ResourceValue -= Amount;
-// 		
-// 		if (*ResourceValue <= 0) {
-// 			Resources.Remove(ResourceType);
-// 		}
-// 	}
-// }
+TMap<ECropResourceType, int> UCropResourceComponent::TakeResources() {
+	return MoveTemp(Resources);
+}
 
 
-void UCropResourceComponent::RemoveTargetResource(ECropResourceType Resource, int Num) {
-	int* ResourceValue = Resources.Find(Resource);
-	int ExistNum = ResourceValue ? *ResourceValue : 0;
-	
-	int32 RemainNum = ExistNum - Num;
-	UpdateResources.Broadcast(Resource, ExistNum);
-	if (RemainNum <= 0) {
-		Resources.Remove(Resource);
+void UCropResourceComponent::ReduceResource(ECropResourceType Resource, int Amount) {
+	int& ResourceAmount = Resources.FindOrAdd(Resource);
+	ResourceAmount -= Amount;
+	if (ResourceAmount <= 0) {
+		ResourceAmount = 0;
 		if (Resource == ECropResourceType::Food ) {
 			UCropStatics::GetGameMode(GetWorld())->EndGame(false);
 		}
 	}
-	else {
-		*ResourceValue -= Num;
-	}
+	
+	UpdateResources.Broadcast(Resource, ResourceAmount);
 }
 
 
-int UCropResourceComponent::GetResourceNum(ECropResourceType ResourceType) {
-	int* ResourceValue = Resources.Find(ResourceType);
-	return ResourceValue ? *ResourceValue : 0;
+int UCropResourceComponent::GetResourceAmount(ECropResourceType ResourceType) {
+	return Resources.FindRef(ResourceType, 0);
 }
 
 

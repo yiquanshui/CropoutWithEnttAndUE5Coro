@@ -37,7 +37,7 @@ void ABaseCrop::SwitchStage() {
 		SetReady();
 	}
 
-	[](UE5Coro::TLatentContext<ABaseCrop> Self)-> FVoidCoroutine {
+	[](UE5Coro::TLatentContext<ABaseCrop> Self)-> UE5Coro::TCoroutine<> {
 		co_await UE5Coro::Latent::Seconds(Self->CooldownTime);
 		Self->SetReady();
 	}(this);
@@ -60,7 +60,7 @@ void ABaseCrop::SetReady() {
 	Mesh->SetStaticMesh(MeshIndex < MeshList.Num() ? MeshList[MeshIndex] : nullptr);
 
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(GetGameInstance());
-	SaveSystem->UpdateAllInteractables();
+	SaveSystem->UpdateInteractables();
 	PopFarmPlot();
 }
 
@@ -90,7 +90,7 @@ void ABaseCrop::FarmingProgress(double& Delay, int& Stage) {
 	Delay = GetCollectionTime();
 	Stage = FMath::TruncToInt(ProgressionState);
 
-	[](UE5Coro::TLatentContext<ABaseCrop> Self) ->FVoidCoroutine {
+	[](UE5Coro::TLatentContext<ABaseCrop> Self) ->UE5Coro::TCoroutine<> {
 		co_await UE5Coro::Latent::Seconds(Self->GetCollectionTime());
 		Self->SwitchStage();
 	}(this);

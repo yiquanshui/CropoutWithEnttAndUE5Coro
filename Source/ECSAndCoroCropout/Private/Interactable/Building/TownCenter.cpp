@@ -36,7 +36,7 @@ void ATownCenter::Tick(float DeltaTime) {
 }
 
 
-FVoidCoroutine ATownCenter::DelayedBeginPlay() {
+UE5Coro::TCoroutine<> ATownCenter::DelayedBeginPlay(FForceLatentCoroutine) {
 	co_await UE5Coro::Latent::Seconds(1.0);
 	APawn* Pawn = UGameplayStatics::GetPlayerController(this, 0)->GetPawn();
 	if (Pawn) {

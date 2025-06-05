@@ -10,9 +10,29 @@
 void UCostWidget::NativePreConstruct() {
 	Super::NativePreConstruct();
 	CostText->SetText(FText::AsNumber(Cost));
+	UpdateImage();
+}
 
+
+void UCostWidget::SetCost(int InCost) {
+	if (Cost != InCost) {
+		Cost = InCost;
+		CostText->SetText(FText::AsNumber(Cost));
+	}
+}
+
+
+void UCostWidget::SetResourceType(ECropResourceType InResourceType) {
+	if (Resource != InResourceType) {
+		Resource = InResourceType;
+		UpdateImage();
+	}
+}
+
+
+void UCostWidget::UpdateImage() {
 	TSoftObjectPtr<UTexture2D>* ImageTexture = ResourceTextures.Find(Resource);
-	if (ImageTexture) {
+	if (!ImageTexture->IsNull()) {
 		ResourceImage->SetBrushFromSoftTexture(*ImageTexture);
 	}
 	else {

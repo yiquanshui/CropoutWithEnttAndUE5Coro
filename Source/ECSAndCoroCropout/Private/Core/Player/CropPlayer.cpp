@@ -511,12 +511,11 @@ void ACropPlayer::RemoveResources() {
 	ACropGameMode* GameMode = UCropStatics::GetGameMode(GetWorld());
 	auto ResourceComp = GameMode->GetComponentByClass<UCropResourceComponent>();
 	for (const TPair<ECropResourceType, int>& Pair : ResourceCost) {
-		ResourceComp->RemoveTargetResource(Pair.Key, Pair.Value);
+		ResourceComp->ReduceResource(Pair.Key, Pair.Value);
 	}
 
-	const auto& CurrentResources =  GameMode->GetCurrentResources();
 	for (auto [ResourceType, Cost] : ResourceCost) {
-		if (CurrentResources.FindRef(ResourceType) < Cost) {
+		if (!ResourceComp->CheckResource(ResourceType, Cost)) {
 			GameMode->RemoveCurrentUILayer();
 			DestroySpawn();
 			break;
@@ -535,7 +534,7 @@ void ACropPlayer::SpawnBuildTarget() {
 	RemoveResources();
 
 	UGameSaveSystem* SaveSystem = UGameInstance::GetSubsystem<UGameSaveSystem>(GetGameInstance());
-	SaveSystem->UpdateAllInteractables();
+	SaveSystem->UpdateInteractables();
 	UpdateBuildAsset();
 }
 

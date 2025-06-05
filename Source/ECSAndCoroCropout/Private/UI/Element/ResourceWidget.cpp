@@ -13,34 +13,37 @@ void UResourceWidget::NativePreConstruct() {
 	Super::NativePreConstruct();
 	auto ImageTexture = ResourceIconTextures.Find(ResourceType);
 	Image->SetBrushFromSoftTexture(ImageTexture ? *ImageTexture : nullptr);
+	if (ResourceComponent) {
+		Value = ResourceComponent->GetResourceAmount(ResourceType);
+	}
+	
 	ValueText->SetText(FText::AsNumber(Value));
-}
-
-
-void UResourceWidget::NativeConstruct() {
-	Super::NativeConstruct();
-	ResourceComponent = UCropStatics::GetGameMode(GetWorld())->GetComponentByClass<UCropResourceComponent>();
-	Value = ResourceComponent->GetResourceNum(ResourceType);
 }
 
 
 void UResourceWidget::NativeOnInitialized() {
 	Super::NativeOnInitialized();
+	ResourceComponent = UCropStatics::GetGameMode(GetWorld())->GetComponentByClass<UCropResourceComponent>();
 	if (ResourceComponent) {
-		ResourceComponent->UpdateResources.AddUObject(this, &ThisClass::UpdateValue);
+		ResourceComponent->UpdateResources.AddUObject(this, &ThisClass::OnResourceUpdated);
 	}
 }
 
 
-void UResourceWidget::SetResourceType(ECropResourceType InResourceType) {
+void UResourceWidget::Init(ECropResourceType InResourceType) {
 	ResourceType = InResourceType;
 }
 
 
-void UResourceWidget::UpdateValue(ECropResourceType Resource, int Num) {
-	if (Resource == ResourceType) {
-		PlayAnimation(Num > Value ? Increase : Decrease);
-		Value = Num;
-		ValueText->SetText(FText::AsNumber(Value));
+void UResourceWidget::OnResourceUpdated(ECropResourceType Resource, int Amount) {
+	if (ResourceType == Resource && Value != Amount) {
+		UpdateValue(Amount);
 	}
+}
+
+
+void UResourceWidget::UpdateValue(int NewValue) {
+	PlayAnimation(NewValue >= Value ? Increase : Decrease);
+	Value = NewValue;
+	ValueText->SetText(FText::AsNumber(Value));
 }

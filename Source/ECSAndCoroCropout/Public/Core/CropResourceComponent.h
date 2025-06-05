@@ -22,14 +22,19 @@ public:
 
 	const TMap<ECropResourceType, int32>& GetResources() const { return Resources; }
 
-	void AddResource(ECropResourceType ResourceType, int Amount);
+	UFUNCTION(BlueprintCallable)
+	void IncreaseResource(ECropResourceType ResourceType, int Amount);
 	
-	// void RemoveResource(ECropResourceType ResourceType, int Amount);
+	UFUNCTION(BlueprintCallable)
+	void ReduceResource(ECropResourceType Resource, int Amount);
 
-	void RemoveTargetResource(ECropResourceType Resource, int Num);
+	UFUNCTION(BlueprintCallable)
+	TMap<ECropResourceType, int> TakeResources();
 
-	int GetResourceNum(ECropResourceType ResourceType);
+	UFUNCTION(BlueprintCallable)
+	int GetResourceAmount(ECropResourceType ResourceType);
 
+	UFUNCTION(BlueprintCallable)
 	bool CheckResource(ECropResourceType ResourceType, int Amount);
 
 private:

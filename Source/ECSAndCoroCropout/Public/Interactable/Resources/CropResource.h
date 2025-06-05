@@ -37,7 +37,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 private:
-	FVoidCoroutine DoScaleUp(float Delay);
+	UE5Coro::TCoroutine<> DoScaleUp(float Delay, FForceLatentCoroutine = {});
 
 	UFUNCTION()
 	void OnScaleTimeline(float Value);
