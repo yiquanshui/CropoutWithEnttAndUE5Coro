@@ -199,7 +199,10 @@ void AVillager::ReturnToDefaultBT() {
 
 
 void AVillager::Eat() {
-	UCropStatics::GetGameMode(GetWorld())->GetComponentByClass<UCropResourceComponent>()->ReduceResource(ECropResourceType::Food, 3);
+	auto ResourceComponent = UCropStatics::GetGameMode(GetWorld())->GetComponentByClass<UCropResourceComponent>();
+	if (ResourceComponent) {
+		ResourceComponent->ReduceResource(ECropResourceType::Food, 3);
+	}
 }
 
 
